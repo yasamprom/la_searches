@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  bot:
+    environment:
+      - TELEGRAM_API_TOKEN=$TELEGRAM_API_TOKEN
+      - TG_IDS=$TG_IDS
+    build:
+      dockerfile: Dockerfile
+      context: .
+      network: host
+    network_mode: host
+    restart: always
