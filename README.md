@@ -4,8 +4,11 @@ source ~/venv/bin/activate
 ```
 
 #### Запуск
-```
-docker-compose up --build
+1. `vim .env.dev`
+   Вписать в него:
+   ```
+   TELEGRAM_API_TOKEN='<token>'
+   TG_IDS='<id1> <id2> ...'
+   ```
 
-TELEGRAM_API_TOKEN='<token>' TG_IDS='<id1> <id2> ...' docker-compose up
-```
+   sudo docker compose up --build -d

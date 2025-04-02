@@ -34,7 +34,7 @@ async def send_welcome(message: types.Message):
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     consumers = ids.split()
-    print('consumers:', consumers)
+    logging.info(f'consumers: {consumers}')
 
     loop.create_task(parse.broadcast(bot, consumers))
     executor.start_polling(dp, skip_updates=True)

@@ -4,6 +4,7 @@ import selenium
 import models.search as search
 import re
 import time
+import logging
 import asyncio
 
 options = selenium.webdriver.ChromeOptions()
@@ -28,7 +29,8 @@ def get_n_searches(n, location=276, offset=0) -> list:
             link = elem.get_attribute("href")
             if link.find('&sid') != -1:
                 link = link[:link.rfind('&sid')]
-            links.append(elem.get_attribute("href"))
+
+            links.append(link)
     except Exception as e:
         raise e
     finally:
@@ -42,7 +44,7 @@ def get_searches_descriptions(links) -> list[search.SearchDescription]:
 
     driver = get_driver()
     for l in links:
-        print('parsing...', l)
+        logging.info(f'parsing: {l}')
         driver.get(l)
         # находим 1ый пост
         post = driver.find_element(By.CSS_SELECTOR, "div[id^='post_content']").find_element(By.CSS_SELECTOR, "div.content")
@@ -53,15 +55,16 @@ def get_searches_descriptions(links) -> list[search.SearchDescription]:
         
         coords = extract_coords(description)
         if len(coords) == 0:
-            print("coords not found in post above", "\n")
-            print("-" * 40)
+            logging.info("coords not found in post above")
+            logging.info("-" * 40)
             continue
 
         type = extract_type(description)
         time = extract_time(description)
         searches.append(search.SearchDescription(l, title, time, type, coords[0][0], coords[0][1], time))
 
-        print("-" * 40)
+        logging.info("-" * 40)
+
     driver.quit()
     return searches
 
@@ -101,19 +104,26 @@ def extract_time(text):
 async def broadcast(bot, ids):
     processed = set()
     while True:
-        searches = get_n_searches(2)
+
+        # смотрим n последних постов.
+        searches = get_n_searches(3)
+
+        # проверяем что раньше не обрабатывали этот пост
+        new_searches = []
         for s in searches:
-            if s in processed:
-                searches.remove(s)
+            if s not in processed:
+                new_searches.append(s)
+            logging.info(f'mark link as processed: {s}')
             processed.add(s)
+
         try:
-            descriptions = get_searches_descriptions(searches)
+            descriptions = get_searches_descriptions(new_searches)
         except Exception as e:
             for chat_id in ids:
                 try:
                     await bot.send_message(int(chat_id), f"Exception: {e}")
                 except:
-                    print('failed to send to:', chat_id)
+                    logging.info(f'failed to send to: {chat_id}')
                     pass
             continue
 
@@ -126,9 +136,9 @@ async def broadcast(bot, ids):
                                                 f"Тип: {d.search_type}\n\n"
                                                 f"`{d.latitude}, {d.longitude}`",
                                parse_mode='Markdown')
+                    await bot.send_location(int(chat_id), d.latitude, d.longitude)
                 except:
-                    print('failed to send to:', chat_id)
-                    pass
+                    logging.info(f'failed to send to: {chat_id}')
 
         await asyncio.sleep(parse_timeout)
 
