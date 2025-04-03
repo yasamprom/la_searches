@@ -54,14 +54,13 @@ def get_searches_descriptions(links) -> list[search.SearchDescription]:
         title = post.find_element(By.TAG_NAME, 'span').find_element(By.CLASS_NAME, 'text-strong').text
         
         coords = extract_coords(description)
-        if len(coords) == 0:
-            logging.info("coords not found in post above")
-            logging.info("-" * 40)
-            continue
 
         type = extract_type(description)
         time = extract_time(description)
-        searches.append(search.SearchDescription(l, title, time, type, coords[0][0], coords[0][1], time))
+        x, y = None, None
+        if len(coords) > 0:
+            x, y = coords[0][0], coords[0][1]
+        searches.append(search.SearchDescription(l, title, time, type, x, y, time))
 
         logging.info("-" * 40)
 
@@ -113,10 +112,9 @@ async def broadcast(bot, ids):
         for s in searches:
             if s not in processed:
                 new_searches.append(s)
-            logging.info(f'mark link as processed: {s}')
-            processed.add(s)
 
         try:
+            # Получаем тексты тех поисков, которые содержат координаты
             descriptions = get_searches_descriptions(new_searches)
         except Exception as e:
             for chat_id in ids:
@@ -128,6 +126,11 @@ async def broadcast(bot, ids):
             continue
 
         for d in descriptions:
+            if d.latitude is None or d.longitude is None:
+                # в этом посте пока нет координат, значит поиск не требует выезда
+                continue
+
+            
             for chat_id in ids:
                 try:
                     await bot.send_message(int(chat_id), text="**Поиск!**\n\n"
@@ -139,6 +142,10 @@ async def broadcast(bot, ids):
                     await bot.send_location(int(chat_id), d.latitude, d.longitude)
                 except:
                     logging.info(f'failed to send to: {chat_id}')
+            # поиск считается обработанным только если в нем были координаты
+            # в противном случае продолжаем читать пост и проверять не появились ли они
+            logging.info(f'mark link as processed: {s}')
+            processed.add(d.link)
 
         await asyncio.sleep(parse_timeout)
 
