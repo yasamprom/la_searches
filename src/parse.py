@@ -105,7 +105,11 @@ async def broadcast(bot, ids):
     while True:
 
         # смотрим n последних постов.
-        searches = get_n_searches(3)
+        try:
+            searches = get_n_searches(3)
+        except Exception as e:
+            logging.error(e)
+            continue
 
         # проверяем что раньше не обрабатывали этот пост
         new_searches = []
