@@ -35,6 +35,7 @@ def get_n_searches(n, location=276, offset=0) -> list:
 
             links.append(link)
     except Exception as e:
+        logging.info("failed to get search links", e)
         raise e
     finally:
         driver.quit()
@@ -67,7 +68,7 @@ def get_searches_descriptions(links) -> list[search.SearchDescription]:
 
             logging.info("-" * 40)
     except Exception as e:
-        logging.error(e)
+        logging.info("failed to parse searches", e)
     finally:
         driver.quit()
     return searches
@@ -113,7 +114,7 @@ async def broadcast(bot, ids):
         try:
             searches = get_n_searches(3)
         except Exception as e:
-            logging.error(e)
+            logging.info("skip broadcast loop")
             continue
 
         # проверяем что раньше не обрабатывали этот пост
@@ -153,7 +154,7 @@ async def broadcast(bot, ids):
                     logging.info(f'failed to send to: {chat_id}')
             # поиск считается обработанным только если в нем были координаты
             # в противном случае продолжаем читать пост и проверять не появились ли они
-            logging.info(f'mark link as processed: {s}')
+            logging.info(f'mark link as processed: {d.link}')
             processed.add(d.link)
 
         await asyncio.sleep(parse_timeout)
