@@ -6,8 +6,11 @@ import re
 import time
 import logging
 import asyncio
+import tempfile
 
 options = selenium.webdriver.ChromeOptions()
+user_data = tempfile.mkdtemp()
+options.add_argument(f'--user-data-dir={user_data}')
 options.add_argument('--headless')
 options.add_argument('--no-sandbox')
 
@@ -20,8 +23,8 @@ parse_timeout = 60*5
 
 def get_n_searches(n, location=276, offset=0) -> list:
     links = []
-    driver = get_driver()
     try:
+        driver = get_driver()
         for i in range(n):
             css_selector=f'#page-body > div.forumbg > div > ul.topiclist.topics > li:nth-child({offset+i+1}) > dl > dt > div > a'
             driver.get(f"https://lizaalert.org/forum/viewforum.php?f={location}")
@@ -41,30 +44,32 @@ def get_n_searches(n, location=276, offset=0) -> list:
 
 def get_searches_descriptions(links) -> list[search.SearchDescription]:
     searches = []
+    try:
+        driver = get_driver()
+        for l in links:
+            logging.info(f'parsing: {l}')
+            driver.get(l)
+            # находим 1ый пост
+            post = driver.find_element(By.CSS_SELECTOR, "div[id^='post_content']").find_element(By.CSS_SELECTOR, "div.content")
+            # находим заголовок
+            description = post.text
+            
+            title = post.find_element(By.TAG_NAME, 'span').find_element(By.CLASS_NAME, 'text-strong').text
+            
+            coords = extract_coords(description)
 
-    driver = get_driver()
-    for l in links:
-        logging.info(f'parsing: {l}')
-        driver.get(l)
-        # находим 1ый пост
-        post = driver.find_element(By.CSS_SELECTOR, "div[id^='post_content']").find_element(By.CSS_SELECTOR, "div.content")
-        # находим заголовок
-        description = post.text
-        
-        title = post.find_element(By.TAG_NAME, 'span').find_element(By.CLASS_NAME, 'text-strong').text
-        
-        coords = extract_coords(description)
+            type = extract_type(description)
+            time = extract_time(description)
+            x, y = None, None
+            if len(coords) > 0:
+                x, y = coords[0][0], coords[0][1]
+            searches.append(search.SearchDescription(l, title, time, type, x, y, time))
 
-        type = extract_type(description)
-        time = extract_time(description)
-        x, y = None, None
-        if len(coords) > 0:
-            x, y = coords[0][0], coords[0][1]
-        searches.append(search.SearchDescription(l, title, time, type, x, y, time))
-
-        logging.info("-" * 40)
-
-    driver.quit()
+            logging.info("-" * 40)
+    except Exception as e:
+        logging.error(e)
+    finally:
+        driver.quit()
     return searches
 
 def extract_coords(text):
