@@ -8,13 +8,12 @@ import logging
 import asyncio
 import tempfile
 
-options = selenium.webdriver.ChromeOptions()
-user_data = tempfile.mkdtemp()
-options.add_argument(f'--user-data-dir={user_data}')
-options.add_argument('--headless')
-options.add_argument('--no-sandbox')
 
 def get_driver():
+    options = selenium.webdriver.ChromeOptions()
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+
     driver = selenium.webdriver.Chrome(options=options)
     return driver
 
